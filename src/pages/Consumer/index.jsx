@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import Chat from '../../components/Chat'
 import mediaSoup from '../../services/mediasoupService'
 
@@ -9,16 +9,10 @@ import { useAuth } from '../../contexts/auth'
 import { getSocketConnection } from '../../services/socketService'
 
 export default function Producer() {
-    const [localStream, setLocalStream] = useState()
-    const [isLive, setIsLive] = useState(false)
     const { user } = useAuth()
-    const { socket } = window
 
     const videoElement = useRef()
-
-    function gotStream(stream) {
-        setLocalStream(stream)
-    }
+    const audioElement = useRef()
 
     useEffect(() => {
         if (user.name) {
@@ -26,37 +20,21 @@ export default function Producer() {
         }
     }, [user.name, user.room])
 
-    useEffect(() => {
-        videoElement.current.srcObject = localStream
-    }, [localStream])
-
-    function toggleIsLive() {
-        if (!socket.connected) return alert('Socket não conectado!')
-        alert('Socket conectado!')
-    }
-
-    useEffect(() => {
-        if (socket?.connected) {
-            mediaSoup.setSocket(socket)            
-            mediaSoup.startTransmission()
-            console.log(mediaSoup._stream)
-        }
-    }, [socket])
-
-    function starStransmission(){
-        if (socket?.connected) {
-            mediaSoup.setSocket(socket)            
-            mediaSoup.startTransmission()           
+    function startTransmission() {
+        if (window.socket?.connected) {
+            mediaSoup.setSocket(window.socket)
+            mediaSoup.setAudioObject(audioElement.current)
+            mediaSoup.setVideoObject(videoElement.current)
+            mediaSoup.rtcConnect()
         }
     }
 
     return (
         <Layout>
             <Player
-                isLive={isLive}
-                toggleIsLive={toggleIsLive}
-                stream={localStream}
+                toggleIsLive={startTransmission}
                 videoRef={videoElement}
+                audioRef={audioElement}
             />
             <Chat />
         </Layout>

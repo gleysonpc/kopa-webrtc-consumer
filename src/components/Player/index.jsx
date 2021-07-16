@@ -4,24 +4,20 @@ import avatarImg from '../../assets/Avatar.png'
 import MediaInputs from '../MediaInputs'
 import { useAuth } from '../../contexts/auth'
 
-export default function Player({
-    videoRef,
-    stream,
-    toggleIsLive,
-    isLive,
-}) {
+export default function Player({ videoRef, audioRef, toggleIsLive, isLive }) {
     const { user } = useAuth()
     return (
         <PlayerContainer>
-            <video autoPlay ref={videoRef}>
+            <video id="videoId" autoPlay ref={videoRef}>
                 Your browser does not support the video tag.
             </video>
+            <audio id="audioId" autoPlay ref={audioRef}></audio>
             <PlayerFooter>
                 <Avatar>
                     <img src={avatarImg} alt="Avatar" />
                     <p>{user.name}</p>
                 </Avatar>
-                <LiveButton                   
+                <LiveButton
                     className={isLive ? 'isLive' : ''}
                     onClick={() => toggleIsLive()}
                 >

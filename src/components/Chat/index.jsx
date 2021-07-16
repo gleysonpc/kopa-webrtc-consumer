@@ -5,40 +5,44 @@ import ChatItem from './ChatItem'
 
 import { ChatContainer, ChatHeader, MessageList, MessageArea } from './styles'
 
+function sortMessages(a, b) {
+    return new Date(b.createdAt) - new Date(a.createdAt)
+}
+
 export default function Chat() {
     const { user } = useAuth()
-    const { socket } = window
+    //const { socket } = window
     const [message, setMessage] = useState('')
     const [messages, setMessages] = useState([])
 
-    function sortMessages(a, b) {
-        return new Date(b.createdAt) - new Date(a.createdAt)
-    }
-
     useEffect(() => {
         async function loadMessagesList() {
-            const messagesList = await socket?.request('listChatMessages')
-            setMessages(messagesList?.sort(sortMessages))        }
-        if(socket?.connected){
+            const messagesList = await window.socket?.request(
+                'listChatMessages'
+            )
+            setMessages(messagesList?.sort(sortMessages))
+        }
+        if (window.socket?.connected) {
             loadMessagesList()
         }
-    }, [socket])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [window.socket?.connected])
 
     async function sendMessage(e) {
         e.preventDefault()
         setMessage('')
-        await socket.request('chatMessage', { message })
-        const messagesList = await socket?.request('listChatMessages')
+        await window.socket?.request('chatMessage', { message })
+        const messagesList = await window.socket?.request('listChatMessages')
         setMessages(messagesList?.sort(sortMessages))
     }
 
     useEffect(() => {
-        socket?.on('chatMessage', async (data) => {
-            setMessages([...messages, data.message].sort(sortMessages))
-        })        
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [socket])
-    
+        window.socket?.on('chatMessage', async (data) => {
+            setMessages((state) => [...state, data.message].sort(sortMessages))
+        })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [window.socket?.connected])
+
     return (
         <ChatContainer>
             <ChatHeader>
@@ -48,9 +52,9 @@ export default function Chat() {
                 </p>
             </ChatHeader>
             <MessageList>
-                {messages?.map((item) => (
+                {messages?.map((item, index) => (
                     <ChatItem
-                        key={item.id}
+                        key={index}
                         user={item.user.name}
                         message={item.message}
                     />
