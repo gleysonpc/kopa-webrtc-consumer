@@ -8,6 +8,8 @@ class MediaSoupService {
         this._videoObject = null
         this._audioObject = null
         this._transport = null
+        this.recvTransport = null
+        this._consumer = {video: null, audio: null}
 
         this.consume = this.consume.bind(this)
         this.createProducers = this.createProducers.bind(this)
@@ -16,7 +18,6 @@ class MediaSoupService {
         this.handleTransportConnect = this.handleTransportConnect.bind(this)
         this.handleStateChange = this.handleStateChange.bind(this)
 
-        this.recvTransport = null
     }
 
     setSocket(socketInstance) {
@@ -49,6 +50,7 @@ class MediaSoupService {
     }
 
     async consume(transport, producer, requestedKind) {
+        console.log('CONSUME', {transport, producer, requestedKind})
         const { rtpCapabilities } = this._mediaDevice
         const data = await this._socket.request('consume', {
             producerId: producer.id,
@@ -73,6 +75,15 @@ class MediaSoupService {
             producerId: producer.id,
             kind: requestedKind,
         })
+        
+        if(requestedKind === 'video'){
+           this._consumer.video = consumer
+        }
+        
+        if(requestedKind === 'audio'){
+           this._consumer.audio = consumer
+        }
+
 
         return { stream, consumer }
     }
@@ -86,6 +97,7 @@ class MediaSoupService {
     }
 
     addStream(producer, kind, stream) {
+        console.log('addStream', {producer, kind, stream})
         const addVideoStream = (producer, stream) => {
             this._videoObject.srcObject = stream
         }
@@ -139,6 +151,8 @@ class MediaSoupService {
     }
 
     async handleGotProducer(data, recvTransport) {
+
+        console.log('<- handleGotProducer ->')
         const { user, kind } = data
 
         const { stream, consumer } = await this.consume(
@@ -146,23 +160,35 @@ class MediaSoupService {
             user,
             kind
         )
-        consumer.observer.on('transportclosed', function () {
-            console.log('z1')
-        })
-        consumer.observer.on('trackended', function () {
-            console.log('z2')
-        })
-        consumer.on('transportclosed', function () {
-            console.log('y1')
-        })
-        consumer.on('trackended', function () {
-            console.log('y2')
-        })
-        consumer.on('producerTransportClosed', function () {
-            console.log('producerTransportClosed')
-        })
+        // consumer.observer.on('transportclosed', function () {
+        //     console.log('z1')
+        // })
+        // consumer.observer.on('trackended', function () {
+        //     console.log('z2')
+        // })
+        // consumer.on('transportclosed', function () {
+        //     console.log('y1')
+        // })
+        // consumer.on('trackended', function () {
+        //     console.log('y2')
+        // })
+        // consumer.on('producerTransportClosed', function () {
+        //     console.log('producerTransportClosed')
+        // })
         // this.createProducer(user)
-        this.addStream(user, kind, stream)
+
+        // await this._socket.request('resume')
+        if(kind === 'video'){
+            let novoVideo = document.createElement('video')
+            novoVideo.srcObject = stream
+            document.body.appendChild(novoVideo)
+            novoVideo.play()
+
+        }
+
+        //this.addStream(user, kind, stream)
+
+    
     }
 
     async handleStateChange(state) {
@@ -211,14 +237,18 @@ class MediaSoupService {
             'connectionstatechange',
             this.handleStateChange.bind({ transport: recvTransport })
         )
+        
 
         this.createProducers(recvTransport)
 
         this._socket.on('gotProducer', (data) =>
             this.handleGotProducer(data, recvTransport)
         )
+        
+        this._socket.on('mediaProducerPause', (data) => console.log('mediaProducerPause', data))
+        this._socket.on('mediaProducerResume', (data) => console.log('mediaProducerResume', data))
 
-        this._socket.on('producerTransportClosed', (data) => console.log(data))
+        this._socket.on('producerTransportClosed', (data) => this._consumer.close())
         console.log('mediaDevice', this._mediaDevice)
         console.log('recvTransport', this.recvTransport)
         console.log('_transport', this._transport)
